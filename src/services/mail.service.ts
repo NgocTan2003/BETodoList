@@ -9,8 +9,6 @@ const logger = winston.createLogger({
 });
 
 export const sendMail = async (to: string, subject: string, html: string) => {
-    console.log('send mail ------------------');
-
     const transporter = nodemailer.createTransport({
         service: MAIL_HOST,
         auth: {

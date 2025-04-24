@@ -8,7 +8,7 @@ import { request, Request } from "express"
 import UserModel from "../models/user.model"
 import { sendMail } from "./mail.service"
 import { getVerifyEmailTemplate } from '../utils/emailTemplates'
-import { APP_ORIGIN } from '../constants/env'
+import { APP_ORIGIN, APP_DOMAIN } from '../constants/env'
 
 type CreateAccountRequest = {
     fullName: string,
@@ -39,7 +39,6 @@ const CreateAccount = async (request: CreateAccountRequest): Promise<AuthRespons
             errorCode: CONFLICT,
         })
     }
-    
 
     const user = await UserModel.create({
         fullName: request.fullName,
@@ -53,29 +52,16 @@ const CreateAccount = async (request: CreateAccountRequest): Promise<AuthRespons
         expiresAt: new Date(Date.now() + 1000 * 60 * 60), // 1 hour 
     })
 
-    const verificationUrl = `${APP_ORIGIN}/auth/email/verify/${verificationCode._id}`;
+    const verificationUrl = `${APP_DOMAIN}/auth/email/verify/${verificationCode._id}`;
     const to: string = user.email;
 
     const { subject, html } = getVerifyEmailTemplate(verificationUrl);
 
     sendMail(to, subject, html);
 
-    const refreshToken = jwt.sign({ user: user.omitPassword() }, JWT_REFRESH_SECRET, {
-        audience: ["user"],
-        expiresIn: "30m",
+    return ({
+        message: "User created successfully and verification email sent",
     });
-
-    const accessToken = jwt.sign({ user: user.omitPassword() }, JWT_SECRET, {
-        audience: ["user"],
-        expiresIn: "15m",
-    });
-
-    return {
-        user: user.omitPassword(),
-        accessToken,
-        refreshToken,
-        message: "User created successfully",
-    };
 }
 
 const Login = async (request: LoginRequest): Promise<AuthResponse> => {
@@ -83,7 +69,7 @@ const Login = async (request: LoginRequest): Promise<AuthResponse> => {
 
     if (!user) {
         return ({
-            message: "Invalid email",
+            message: "Not Found Email",
             errorCode: NOT_FOUND,
         })
     }

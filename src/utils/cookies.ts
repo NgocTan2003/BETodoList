@@ -26,6 +26,7 @@ type Params = {
   accessToken: string;
   refreshToken: string;
 };
+
 export const setAuthCookies = ({ res, accessToken, refreshToken }: Params) =>
   res
     .cookie("accessToken", accessToken, getAccessTokenCookieOptions())
