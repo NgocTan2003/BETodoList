@@ -1,0 +1,230 @@
+import NoteModel, { NoteDocument } from "../models/note.model";
+import { NOT_FOUND, CREATED, INTERNAL_SERVER_ERROR } from "../constants/http"
+import { Request } from "express";
+import jwt from "jsonwebtoken"
+import { JWT_SECRET } from "../constants/env"
+import { uploadImage } from "../services/image.service"
+
+
+type CreateNoteRequest = {
+    title: string;
+    content: string;
+    isPinned: boolean;
+    tags: Array<String>;
+    userId: string;
+    images?: Buffer[] | null;
+}
+
+type UpdateNoteResquest = {
+    title: string;
+    content: string;
+    isPinned: boolean;
+    tags: Array<String>;
+    image?: string;
+    images?: Buffer[] | null;
+}
+
+type NoteResponse = {
+    errorCode?: number,
+    message: string,
+    notes?: Array<NoteDocument>
+}
+
+type UpdateIsPinned = {
+    isPinned: boolean;
+}
+
+type note = {
+    title: string;
+    content: string;
+    isPinned: boolean;
+    tags: Array<String>;
+    pathImages?: Array<string>;
+    userId: string
+}
+
+const GetAll = async (userId: string): Promise<NoteResponse> => {
+    try {
+        const notes = await NoteModel.find({ userId: userId });
+
+        return {
+            message: "Success",
+            notes: notes
+        }
+    } catch (error: any) {
+        return {
+            errorCode: INTERNAL_SERVER_ERROR,
+            message: error
+        };
+    }
+}
+
+const Create = async (request: CreateNoteRequest): Promise<NoteResponse> => {
+    try {
+
+        const noteData: note = {
+            title: request.title,
+            content: request.content,
+            isPinned: request.isPinned,
+            tags: request.tags,
+            userId: request.userId,
+            pathImages: []
+        }
+
+        console.log("CreateNoteRequest note service ----------", request.images);
+
+        if (request.images && request.images.length > 0) {
+            for (const img of request.images) {
+                const resultImage = await uploadImage(img);
+
+                if (resultImage.errorCode) {
+                    return {
+                        errorCode: resultImage.errorCode,
+                        message: resultImage.message
+                    };
+                }
+
+                if (resultImage.url) {
+                    noteData.pathImages?.push(resultImage.url);
+                }
+            }
+        }
+
+        const note = await NoteModel.create(noteData);
+
+        return {
+            message: "Create Success"
+        }
+    } catch (error: any) {
+        console.log("erorr note service -----------------------", error);
+
+        return {
+            errorCode: INTERNAL_SERVER_ERROR,
+            message: error
+        };
+    }
+}
+
+const Update = async (req: Request, data: UpdateNoteResquest): Promise<NoteResponse> => {
+    try {
+        const note = await NoteModel.findOne({ _id: req.params.noteId })
+        if (!note) {
+            return ({
+                errorCode: NOT_FOUND,
+                message: "Not Found"
+            })
+        }
+
+        if (data.title) note.title = data.title;
+        if (data.content) note.content = data.content;
+        if (data.tags) note.tags = data.tags;
+        if (data.isPinned) note.isPinned = data.isPinned;
+
+        if (data.images && data.images.length > 0) {
+            for (const img of data.images) {
+                const resultImage = await uploadImage(img);
+
+                if (resultImage.errorCode) {
+                    return {
+                        errorCode: resultImage.errorCode,
+                        message: resultImage.message
+                    };
+                }
+
+                if (resultImage.url) {
+                    note.pathImages?.push(resultImage.url);
+                }
+            }
+        }
+
+
+        await note.save();
+
+        return {
+            message: "Update Success"
+        }
+    } catch (error: any) {
+        return {
+            errorCode: INTERNAL_SERVER_ERROR,
+            message: error
+        };
+    }
+}
+
+const Delete = async (req: Request): Promise<NoteResponse> => {
+    try {
+        const note = await NoteModel.findOne({ _id: req.params.noteId })
+        if (!note) {
+            return ({
+                errorCode: NOT_FOUND,
+                message: "Not Found"
+            })
+        }
+
+        await NoteModel.deleteOne({ _id: note._id });
+
+        return {
+            message: "Delete Success"
+        }
+    } catch (error: any) {
+        return {
+            errorCode: INTERNAL_SERVER_ERROR,
+            message: error
+        };
+    }
+}
+
+const Search = async (req: Request): Promise<NoteResponse> => {
+    try {
+        const accessToken = req.cookies.accessToken;
+        const decoded: any = jwt.verify(accessToken, JWT_SECRET);
+        const userId = decoded.user._id;
+        const searchQuery = req.query.query as string;
+
+        const matchingNotes = await NoteModel.find({
+            userId: userId,
+            $or: [
+                { title: { $regex: new RegExp(searchQuery, "i") } },
+                { content: { $regex: new RegExp(searchQuery, "i") } }
+            ],
+        });
+
+        return {
+            message: "Success",
+            notes: matchingNotes
+        }
+
+    } catch (error: any) {
+        return {
+            errorCode: INTERNAL_SERVER_ERROR,
+            message: error
+        };
+    }
+}
+
+const UpdateIsPinned = async (req: Request, data: UpdateIsPinned): Promise<NoteResponse> => {
+    try {
+        const note = await NoteModel.findOne({ _id: req.params.noteId })
+        if (!note) {
+            return {
+                errorCode: NOT_FOUND,
+                message: "Note note found"
+            };
+        }
+
+        note.isPinned = data.isPinned;
+        await note.save();
+
+        return {
+            message: "Update Success",
+        }
+
+    } catch (error: any) {
+        return {
+            errorCode: INTERNAL_SERVER_ERROR,
+            message: error
+        };
+    }
+}
+
+export { GetAll, Create, Update, Delete, Search, UpdateIsPinned }
