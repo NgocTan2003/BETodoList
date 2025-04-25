@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { CreateAccount, Login, RefreshToken, VerifyEmail, SendMail } from "../services/auth.service"
-import { BAD_REQUEST, CREATED, OK } from "../constants/http";
+import { CreateAccount, Login, RefreshToken, VerifyEmail, SendMail, GetUserInfo } from "../services/auth.service"
+import { BAD_REQUEST, CREATED, INTERNAL_SERVER_ERROR, OK, UNAUTHORIZED } from "../constants/http";
 import { clearAuthCookies, setAuthCookies } from "../utils/cookies";
 import { Request, Response } from "express";
 import { loginSchema, registerSchema } from "./auth.schemas";
@@ -73,6 +73,20 @@ const loginHandler = async (req: Request, res: Response): Promise<any> => {
     }
 }
 
+const getUserInfoHandler = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const response = await GetUserInfo(req);
+        if (!response.errorCode) {
+            return res.status(OK).json({
+                statusCode: OK,
+                user: response.user
+            });
+        }
+    } catch (err: any) {
+        return res.status(INTERNAL_SERVER_ERROR).json({ message: err.message });
+    }
+}
+
 const logoutHandler = async (req: Request, res: Response): Promise<any> => {
     return clearAuthCookies(res).status(OK).json({
         message: "Logged out successfully"
@@ -132,5 +146,5 @@ const sendMailHandler = async (req: Request, res: Response): Promise<any> => {
 }
 
 
-export { registerHandler, loginHandler, logoutHandler, refreshHandler, verifyHandler, sendMailHandler }
+export { registerHandler, loginHandler, logoutHandler, refreshHandler, verifyHandler, sendMailHandler, getUserInfoHandler }
 

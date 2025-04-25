@@ -8,7 +8,6 @@ const jwt = require('jsonwebtoken');
 
 const authenticateToken = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     const token = req.cookies.accessToken;
-    console.log("bbb----------------------")
     if (!token) {
         res.sendStatus(UNAUTHORIZED);
         return;
@@ -23,8 +22,6 @@ const authenticateToken = async (req: Request, res: Response, next: NextFunction
             const result = await RefreshToken(req);
 
             if (result.accessToken && result.refreshToken) {
-                console.log("set Cookies");
-
                 setAuthCookies({
                     res,
                     accessToken: result.accessToken,
@@ -41,7 +38,6 @@ const authenticateToken = async (req: Request, res: Response, next: NextFunction
         }
 
         return res.status(FORBIDDEN).json({ message: "Invalid access token" });
-
     }
 };
 

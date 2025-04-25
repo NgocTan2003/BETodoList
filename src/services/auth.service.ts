@@ -91,12 +91,12 @@ const Login = async (request: LoginRequest): Promise<AuthResponse> => {
 
     const accessToken = jwt.sign({ user: user.omitPassword() }, JWT_SECRET, {
         audience: ["user"],
-        expiresIn: "1m",
+        expiresIn: "60m",
     });
 
     const refreshToken = jwt.sign({ user: user.omitPassword() }, JWT_REFRESH_SECRET, {
         audience: ["user"],
-        expiresIn: "10m",
+        expiresIn: "80m",
     });
 
     return {
@@ -104,6 +104,21 @@ const Login = async (request: LoginRequest): Promise<AuthResponse> => {
         refreshToken,
         message: "User logged in successfully",
     };
+}
+
+const GetUserInfo = async (request: Request): Promise<AuthResponse> => {
+    const user = (request as any).user;
+    if (!user || !user._id) {
+        return ({
+            message: "Unauthorized",
+            errorCode: UNAUTHORIZED,
+        })
+    } else {
+        return ({
+            message: "User info retrieved successfully",
+            user: user
+        })
+    }
 }
 
 const RefreshToken = async (request: Request): Promise<AuthResponse> => {
@@ -239,4 +254,4 @@ const SendMail = async (email: string): Promise<AuthResponse> => {
 }
 
 
-export { CreateAccount, Login, RefreshToken, VerifyEmail, SendMail }
+export { CreateAccount, Login, RefreshToken, VerifyEmail, SendMail, GetUserInfo }
