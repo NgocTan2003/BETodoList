@@ -36,7 +36,6 @@ const userSchema = new mongoose.Schema<UserDocument>({
 
 
 userSchema.pre("save", async function (next) {
-    // ktra xem password có bị thay đổi k
     if (!this.isModified("password")) {
         return next();
     }
@@ -44,7 +43,6 @@ userSchema.pre("save", async function (next) {
     next();
 });
 
-// hàm so sánh password khi đăng nhập
 userSchema.methods.comparePassword = async function (val: string) {
     return compareValue(val, this.password);
 }

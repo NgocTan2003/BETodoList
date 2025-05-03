@@ -5,17 +5,17 @@ const createNoteSchema = z.object({
     content: z.string().min(6, { message: "Content must be at least 6 characters long" }).max(100),
     isPinned: z.boolean(),
     tags: z.array(z.string()),
-    userId: z.string().nonempty({ message: "UserId is required" }),
-    images: z.array(z.string())
+    userId: z.string(),
+    images: z.array(z.instanceof(Buffer)),
 })
 
-const upateNoteSchema = z.object({
+const updateNoteSchema = z.object({
     title: z.string().min(6, { message: "Title must be at least 6 characters long" }).max(100),
     content: z.string().min(6, { message: "Content must be at least 6 characters long" }).max(100),
     isPinned: z.boolean(),
     tags: z.array(z.string()),
-    userId: z.string().nonempty({ message: "UserId is required" }),
-    image: z.string()
+    imageOld: z.array(z.string()),
+    images: z.array(z.instanceof(Buffer)),
 })
 
 const updateNoteIsPinnedSchema = z.object({
@@ -23,4 +23,4 @@ const updateNoteIsPinnedSchema = z.object({
 })
 
 
-export { createNoteSchema, upateNoteSchema, updateNoteIsPinnedSchema }
+export { createNoteSchema, updateNoteSchema, updateNoteIsPinnedSchema }

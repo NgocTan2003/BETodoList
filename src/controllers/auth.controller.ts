@@ -55,10 +55,10 @@ const loginHandler = async (req: Request, res: Response): Promise<any> => {
         if (accessToken && refreshToken) {
             return setAuthCookies({ res, accessToken, refreshToken })
                 .status(OK)
-                .json({ "accessToken": accessToken, "refreshToken": refreshToken, "message": message, "statuscode": OK });
+                .json({ "accessToken": accessToken, "refreshToken": refreshToken, "message": message, "statusCode": OK });
         } else if (errorCode) {
             return res.status(OK).json({
-                statuscode: errorCode,
+                statusCode: errorCode,
                 message: message,
             });
         } else {
@@ -89,6 +89,7 @@ const getUserInfoHandler = async (req: Request, res: Response): Promise<any> => 
 
 const logoutHandler = async (req: Request, res: Response): Promise<any> => {
     return clearAuthCookies(res).status(OK).json({
+        statusCode: OK,
         message: "Logged out successfully"
     });
 }

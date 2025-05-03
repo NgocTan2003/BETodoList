@@ -1,8 +1,8 @@
-import { createNoteSchema, upateNoteSchema, updateNoteIsPinnedSchema } from "./note.schema";
+import { createNoteSchema, updateNoteSchema, updateNoteIsPinnedSchema } from "./note.schema";
 import { Create, Delete, GetAll, Update, Search, UpdateIsPinned } from "../services/note.service"
 import { z } from "zod";
 import { Request, Response } from "express";
-import { CREATED, OK, INTERNAL_SERVER_ERROR, UNAUTHORIZED } from "../constants/http"
+import { CREATED, OK, INTERNAL_SERVER_ERROR, UNAUTHORIZED, BAD_REQUEST } from "../constants/http"
 
 const getAllHandler = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -38,6 +38,7 @@ const getAllHandler = async (req: Request, res: Response): Promise<any> => {
 
 const createHandler = async (req: Request, res: Response): Promise<any> => {
     try {
+        const userId = (req as any).user?._id;
         const files = req.files as Express.Multer.File[];
 
         const request = {
@@ -45,18 +46,15 @@ const createHandler = async (req: Request, res: Response): Promise<any> => {
             content: req.body.content,
             isPinned: req.body.isPinned === "true",
             tags: JSON.parse(req.body.tags),
-            userId: req.body.userId,
+            userId: userId,
             images: files.map(file => file.buffer)
         };
 
-        console.log("Request -------------------------", request)
-
-        const response = await Create(request);
+        const validatedData = createNoteSchema.parse(request);
+        const response = await Create(validatedData);
 
         if (response.errorCode) {
-            console.log("erorr controller ------------------------------");
-
-            return res.status(response.errorCode || 500).json({
+            return res.status(OK).json({
                 statusCode: response.errorCode,
                 message: response.message
             });
@@ -69,7 +67,10 @@ const createHandler = async (req: Request, res: Response): Promise<any> => {
     } catch (error) {
         if (error instanceof z.ZodError) {
             const messages = error.errors.map(err => err.message);
-            return res.status(400).json({ messages });
+            return res.status(OK).json({
+                statuscode: BAD_REQUEST,
+                message: messages,
+            });
         }
         throw error;
     }
@@ -82,12 +83,14 @@ const updateHandler = async (req: Request, res: Response): Promise<any> => {
         const request = {
             title: req.body.title,
             content: req.body.content,
-            isPinned: req.body.isPinned === "true",
+            isPinned: req.body.isPinned  === "true",
             tags: JSON.parse(req.body.tags),
+            imageOld: JSON.parse(req.body.imageOld),
             images: files.map(file => file.buffer)
         };
 
-        const response = await Update(req, request);
+        const validatedData = updateNoteSchema.parse(request);
+        const response = await Update(req, validatedData);
 
         if (response.errorCode) {
             return res.status(response.errorCode || 500).json({

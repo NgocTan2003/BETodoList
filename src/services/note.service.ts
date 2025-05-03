@@ -3,8 +3,8 @@ import { NOT_FOUND, CREATED, INTERNAL_SERVER_ERROR } from "../constants/http"
 import { Request } from "express";
 import jwt from "jsonwebtoken"
 import { JWT_SECRET } from "../constants/env"
-import { uploadImage } from "../services/image.service"
-
+import { uploadImage, deleteImage } from "../services/image.service"
+import { extractPublicId } from "../utils/helper"
 
 type CreateNoteRequest = {
     title: string;
@@ -20,7 +20,7 @@ type UpdateNoteResquest = {
     content: string;
     isPinned: boolean;
     tags: Array<String>;
-    image?: string;
+    imageOld?: Array<String>;
     images?: Buffer[] | null;
 }
 
@@ -61,7 +61,6 @@ const GetAll = async (userId: string): Promise<NoteResponse> => {
 
 const Create = async (request: CreateNoteRequest): Promise<NoteResponse> => {
     try {
-
         const noteData: note = {
             title: request.title,
             content: request.content,
@@ -70,8 +69,6 @@ const Create = async (request: CreateNoteRequest): Promise<NoteResponse> => {
             userId: request.userId,
             pathImages: []
         }
-
-        console.log("CreateNoteRequest note service ----------", request.images);
 
         if (request.images && request.images.length > 0) {
             for (const img of request.images) {
@@ -85,19 +82,18 @@ const Create = async (request: CreateNoteRequest): Promise<NoteResponse> => {
                 }
 
                 if (resultImage.url) {
+                    console.log("resultImage.url ------------------------------", resultImage.url);
                     noteData.pathImages?.push(resultImage.url);
                 }
             }
         }
 
         const note = await NoteModel.create(noteData);
-
         return {
             message: "Create Success"
         }
     } catch (error: any) {
         console.log("erorr note service -----------------------", error);
-
         return {
             errorCode: INTERNAL_SERVER_ERROR,
             message: error
@@ -119,24 +115,42 @@ const Update = async (req: Request, data: UpdateNoteResquest): Promise<NoteRespo
         if (data.content) note.content = data.content;
         if (data.tags) note.tags = data.tags;
         if (data.isPinned) note.isPinned = data.isPinned;
+        if (data.imageOld) {
+            const deletedImages = note.pathImages
+                .filter(image => !data.imageOld?.includes(image))
+                .map(image => image.toString());
+
+            const publicIds = deletedImages
+                .map(url => extractPublicId(url))
+                .filter(Boolean);
+
+            const deleteResult = await deleteImage(publicIds);
+            console.log('Delete result:', deleteResult);
+            if (deleteResult.errorCode) {
+                return {
+                    errorCode: deleteResult.errorCode,
+                    message: deleteResult.message
+                };
+            }
+            note.pathImages = data.imageOld;
+        }
 
         if (data.images && data.images.length > 0) {
             for (const img of data.images) {
-                const resultImage = await uploadImage(img);
+                const resultCreate = await uploadImage(img);
 
-                if (resultImage.errorCode) {
+                if (resultCreate.errorCode) {
                     return {
-                        errorCode: resultImage.errorCode,
-                        message: resultImage.message
+                        errorCode: resultCreate.errorCode,
+                        message: resultCreate.message
                     };
                 }
 
-                if (resultImage.url) {
-                    note.pathImages?.push(resultImage.url);
+                if (resultCreate.url) {
+                    note.pathImages?.push(resultCreate.url);
                 }
             }
         }
-
 
         await note.save();
 
