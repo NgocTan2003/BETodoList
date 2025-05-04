@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
+import { PaginateModel } from '../types/mongoose-paginate';
 
 export interface NoteDocument extends mongoose.Document {
     title: string;
@@ -37,5 +39,10 @@ const noteSchema = new mongoose.Schema<NoteDocument>({
     }
 }, { timestamps: true });
 
-const NoteModel = mongoose.model<NoteDocument>("Note", noteSchema);
+noteSchema.plugin(mongoosePaginate);
+const NoteModel = mongoose.model<NoteDocument, PaginateModel<NoteDocument>>(
+    'Note',
+    noteSchema
+);
+
 export default NoteModel;

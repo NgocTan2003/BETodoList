@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken"
 import { JWT_SECRET } from "../constants/env"
 import { uploadImage, deleteImage } from "../services/image.service"
 import { extractPublicId } from "../utils/helper"
+import { PaginateResult } from '../types/mongoose-paginate';
 
 type CreateNoteRequest = {
     title: string;
@@ -30,6 +31,12 @@ type NoteResponse = {
     notes?: Array<NoteDocument>
 }
 
+type NotePaginateResponse = {
+    errorCode?: number;
+    message: string;
+    notes?: PaginateResult<NoteDocument>;
+};
+
 type UpdateIsPinned = {
     isPinned: boolean;
 }
@@ -43,21 +50,34 @@ type note = {
     userId: string
 }
 
-const GetAll = async (userId: string): Promise<NoteResponse> => {
+const GetList = async (userId: string, req: Request): Promise<NotePaginateResponse> => {
     try {
-        const notes = await NoteModel.find({ userId: userId });
+        const {
+            _page = 1,
+            _limit = 10,
+            _sort = "createdAt",
+            _order = "desc",
+        } = req.query as any;
+
+        const options = {
+            page: _page,
+            limit: _limit,
+            sort: { [_sort]: _order === "desc" ? -1 : 1 },
+        };
+
+        const notes = await NoteModel.paginate({ userId: userId }, options);
 
         return {
             message: "Success",
-            notes: notes
-        }
+            notes: notes,
+        };
     } catch (error: any) {
         return {
             errorCode: INTERNAL_SERVER_ERROR,
-            message: error
+            message: error.message || "Unknown error",
         };
     }
-}
+};
 
 const Create = async (request: CreateNoteRequest): Promise<NoteResponse> => {
     try {
@@ -82,7 +102,6 @@ const Create = async (request: CreateNoteRequest): Promise<NoteResponse> => {
                 }
 
                 if (resultImage.url) {
-                    console.log("resultImage.url ------------------------------", resultImage.url);
                     noteData.pathImages?.push(resultImage.url);
                 }
             }
@@ -125,20 +144,12 @@ const Update = async (req: Request, data: UpdateNoteResquest): Promise<NoteRespo
                 .filter(Boolean);
 
             const deleteResult = await deleteImage(publicIds);
-            console.log('Delete result:', deleteResult);
-            if (deleteResult.errorCode) {
-                return {
-                    errorCode: deleteResult.errorCode,
-                    message: deleteResult.message
-                };
-            }
             note.pathImages = data.imageOld;
         }
 
         if (data.images && data.images.length > 0) {
             for (const img of data.images) {
                 const resultCreate = await uploadImage(img);
-
                 if (resultCreate.errorCode) {
                     return {
                         errorCode: resultCreate.errorCode,
@@ -241,4 +252,4 @@ const UpdateIsPinned = async (req: Request, data: UpdateIsPinned): Promise<NoteR
     }
 }
 
-export { GetAll, Create, Update, Delete, Search, UpdateIsPinned }
+export { GetList, Create, Update, Delete, Search, UpdateIsPinned }

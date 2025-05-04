@@ -1,10 +1,10 @@
 import { createNoteSchema, updateNoteSchema, updateNoteIsPinnedSchema } from "./note.schema";
-import { Create, Delete, GetAll, Update, Search, UpdateIsPinned } from "../services/note.service"
+import { Create, Delete, Update, Search, UpdateIsPinned, GetList } from "../services/note.service"
 import { z } from "zod";
 import { Request, Response } from "express";
 import { CREATED, OK, INTERNAL_SERVER_ERROR, UNAUTHORIZED, BAD_REQUEST } from "../constants/http"
 
-const getAllHandler = async (req: Request, res: Response): Promise<any> => {
+const getListHandler = async (req: Request, res: Response): Promise<any> => {
     try {
         const user = (req as any).user;
         if (!user || !user._id) {
@@ -14,7 +14,7 @@ const getAllHandler = async (req: Request, res: Response): Promise<any> => {
             });
         }
 
-        const response = await GetAll(user._id);
+        const response = await GetList(user._id, req);
 
         if (response.errorCode) {
             return res.status(response.errorCode || 500).json({
@@ -83,7 +83,7 @@ const updateHandler = async (req: Request, res: Response): Promise<any> => {
         const request = {
             title: req.body.title,
             content: req.body.content,
-            isPinned: req.body.isPinned  === "true",
+            isPinned: req.body.isPinned === "true",
             tags: JSON.parse(req.body.tags),
             imageOld: JSON.parse(req.body.imageOld),
             images: files.map(file => file.buffer)
@@ -188,4 +188,4 @@ const updateIsPinned = async (req: Request, res: Response): Promise<any> => {
     }
 }
 
-export { getAllHandler, createHandler, updateHandler, deleteHandler, searchHandler, updateIsPinned }
+export { getListHandler, createHandler, updateHandler, deleteHandler, searchHandler, updateIsPinned }
