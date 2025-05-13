@@ -49,7 +49,7 @@ const CreateAccount = async (request: CreateAccountRequest): Promise<AuthRespons
     const verificationCode = await VerificationCodeModel.create({
         userId: user._id,
         type: VerificationCodeType.EmailVerification,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60),  
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60),
     })
 
     const verificationUrl = `${APP_DOMAIN}/auth/email/verify/${verificationCode._id}`;
@@ -75,7 +75,7 @@ const Login = async (request: LoginRequest): Promise<AuthResponse> => {
     }
 
     const isPasswordValid = await user.comparePassword(request.password);
-    if (isPasswordValid) {
+    if (!isPasswordValid) {
         return ({
             message: "Invalid password",
             errorCode: UNAUTHORIZED,
